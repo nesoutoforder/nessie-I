@@ -1,0 +1,5 @@
+sim/obj_dir/
+sim/logs/
+sim/*.vcd
+sim/*.wlf
+sim/transcript
