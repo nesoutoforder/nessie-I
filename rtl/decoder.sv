@@ -12,10 +12,12 @@ module decoder
     funct3_t funct3;
     funct7_t funct7;
 
-    assign opcode       = instr_i[6:0];
-    assign rd_addr_o    = instr_i[11:7];
-    assign rs1_addr_o   = instr_i[19:15];
-    assign rs2_addr_o   = instr_i[24:20];
+    assign opcode      = instr_i[6:0];
+    assign rd_addr_o   = instr_i[11:7];
+    assign funct3      = instr_i[14:12];
+    assign rs1_addr_o  = instr_i[19:15];
+    assign rs2_addr_o  = instr_i[24:20];
+    assign funct7      = instr_i[31:25];
 
     always_comb begin
         ctrl_o = '0;
@@ -25,6 +27,9 @@ module decoder
                 ctrl_o.valid        = 1'b1;
                 ctrl_o.rd_we        = 1'b1;
                 ctrl_o.alu_src_imm  = 1'b0;
+                ctrl_o.mem_read     = 1'b0;
+                ctrl_o.mem_write    = 1'b0;
+                ctrl_o.wb_from_mem  = 1'b0;
 
                 unique case (funct3)
                     3'h0: ctrl_o.alu_op = (funct7 == 7'h20) ? ALU_SUB : ALU_ADD;
@@ -43,6 +48,10 @@ module decoder
                 ctrl_o.valid        = 1'b1;
                 ctrl_o.rd_we        = 1'b1;
                 ctrl_o.alu_src_imm  = 1'b1;
+                ctrl_o.mem_read     = 1'b0;
+                ctrl_o.mem_write    = 1'b0;
+                ctrl_o.wb_from_mem  = 1'b0;
+                ctrl_o.imm_type = IMM_I;
 
                 unique case (funct3)
                     3'h0: ctrl_o.alu_op = ALU_ADD;
@@ -55,7 +64,74 @@ module decoder
                     3'h3: ctrl_o.alu_op = ALU_SLTU;
                     default: ctrl_o.valid = 1'b0;
                 endcase
-            end   
+            end
+
+            OPCODE_LOAD:    begin
+                ctrl_o.valid        = 1'b1;
+                ctrl_o.rd_we        = 1'b1;
+                ctrl_o.alu_op       = ALU_ADD;
+                ctrl_o.alu_src_imm = 1'b1;
+                ctrl_o.imm_type     = IMM_I;
+                ctrl_o.mem_read     = 1'b1;
+                ctrl_o.wb_from_mem  = 1'b1;
+            end
+
+            OPCODE_STORE: begin
+                ctrl_o.valid        = 1'b1;
+                ctrl_o.alu_src_imm  = 1'b1;
+                ctrl_o.alu_op       = ALU_ADD;
+                ctrl_o.imm_type     = IMM_S;
+                ctrl_o.mem_write    = 1'b1;
+            end
+
+            OPCODE_BRANCH: begin
+                ctrl_o.valid        = 1'b1;
+                ctrl_o.alu_op       = ALU_SUB;
+                ctrl_o.imm_type     = IMM_B;
+                ctrl_o.branch       = 1'b1;
+
+                unique case(funct3)
+                    3'h0:   ctrl_o.branch_op = BR_EQ;
+                    3'h1:   ctrl_o.branch_op = BR_NE;
+                    3'h4:   ctrl_o.branch_op = BR_LT;
+                    3'h5:   ctrl_o.branch_op = BR_GE;
+                    3'h6:   ctrl_o.branch_op = BR_LTU;
+                    3'h7:   ctrl_o.branch_op = BR_GEU;
+                    default: ctrl_o.valid = 1'b0;
+                endcase
+            end
+
+            OPCODE_JAL: begin
+                ctrl_o.valid        = 1'b1;
+                ctrl_o.rd_we        = 1'b1;
+                ctrl_o.imm_type     = IMM_J;
+                ctrl_o.jump         = 1'b1;
+                ctrl_o.wb_from_pc4  = 1'b1;
+            end
+
+            OPCODE_JALR: begin
+                ctrl_o.valid        = 1'b1;
+                ctrl_o.rd_we        = 1'b1;
+                ctrl_o.alu_src_imm  = 1'b1;
+                ctrl_o.alu_op       = ALU_ADD;
+                ctrl_o.imm_type     = IMM_I;
+                ctrl_o.jump_reg     = 1'b1;
+                ctrl_o.wb_from_pc4  = 1'b1;
+            end
+
+            OPCODE_LUI: begin
+                ctrl_o.valid        = 1'b1;
+                ctrl_o.rd_we        = 1'b1;
+                ctrl_o.imm_type     = IMM_U;
+                ctrl_o.wb_from_imm  = 1'b1;
+            end
+
+            OPCODE_AUIPC: begin
+                ctrl_o.valid        = 1'b1;
+                ctrl_o.rd_we        = 1'b1;
+                ctrl_o.imm_type     = IMM_U;
+                ctrl_o.wb_from_pc_imm  = 1'b1;           
+            end
 
             default:    begin
                 ctrl_o.valid = 1'b0;

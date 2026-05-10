@@ -10,6 +10,7 @@ package rv32_pkg;
     typedef logic [2:0] funct3_t;
     typedef logic [6:0] funct7_t;
     typedef logic [6:0] opcode_t;
+    typedef logic [3:0] byte_en_t;
 
     typedef enum logic [6:0] {  
         OPCODE_LUI      = 7'b0110111,
@@ -44,11 +45,32 @@ package rv32_pkg;
         IMM_J
     } imm_type_e;
 
+    typedef enum logic [2:0] {
+        BR_NONE,
+        BR_EQ,
+        BR_NE,
+        BR_LT,
+        BR_GE,
+        BR_LTU,
+        BR_GEU
+    } branch_op_e;
+
     typedef struct packed {
         logic       valid;
         alu_op_e    alu_op;
         logic       rd_we;
         logic       alu_src_imm;
+        imm_type_e  imm_type;
+        logic       mem_read;
+        logic       mem_write;
+        logic       wb_from_mem;
+        logic       branch;
+        branch_op_e branch_op;
+        logic       jump;
+        logic       jump_reg;
+        logic       wb_from_pc4;
+        logic       wb_from_imm;
+        logic       wb_from_pc_imm;
     } decode_ctrl_t;
 
 endpackage
